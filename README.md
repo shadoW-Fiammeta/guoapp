@@ -42,7 +42,7 @@ Flutter 多端独立短剧 / 影视应用，原名「短剧库 APP」。站源�
 
 没有 Windows 开发环境时，将本源码放入自己的 GitHub 仓库，进入 **Actions → Build Windows desktop → Run workflow**，选择 `all`（全站源）或 `hongguo`（仅红果）。任务在 Windows 构建机安装依赖、检查源码和桌面布局，再生成 ZIP；成功后从该任务的 Artifacts 下载。该任务可手动运行，也会在推送 `codex/windows-desktop` 分支时自动构建全站源版，不发布 Release。原来的 Build app packages 工作流保持原样，其中 Windows 任务仍停用。
 
-已完成 Dart 格式化、Python 构建辅助测试（17 项，1 项跳过）、Windows 云端依赖锁校验和静态分析（无错误，保留上游非阻断警告），九项桌面与搜索 widget 测试通过。布局检查覆盖 840×560、1280×800、1920×1080 三种分辨率、侧栏切换、搜索快捷键、缩小窗口、播放侧栏和详情分栏。Windows Release 构建与完整 ZIP 打包成功；真实视频播放和本机音视频设备仍待实机验证。
+已完成 Dart 格式化、Python 构建辅助测试（17 项，1 项跳过）、Windows 云端依赖锁校验和静态分析（无错误，保留上游非阻断警告），九项桌面与搜索 widget 测试通过。布局检查覆盖 840×560、1280×800、1920×1080 三种分辨率、侧栏切换、搜索快捷键、缩小窗口、播放侧栏和详情分栏。Windows Release 构建与完整 ZIP 打包成功，发行包剔除两个未被其他组件引用的 ANGLE 调试库，并检查其余 DLL 依赖；真实视频播放和本机音视频设备仍待实机验证。
 
 本轮同时补齐上游遗漏的播放器依赖锁文件，并将失效的 libmpv 归档更新为已核验 SHA256 的 20261103 构建。构建记录：[Build Windows desktop #3](https://github.com/shadoW-Fiammeta/guoapp/actions/runs/41595165074)。
 

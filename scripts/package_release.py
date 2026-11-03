@@ -48,7 +48,7 @@ else:
     target = output / f'{variant.slug}-{version}-windows-x64.zip'
     with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED) as archive:
         for source in sorted(bundle.rglob('*')):
-            if source.is_file():
+            if source.is_file() and source.name not in {'libc++.dll', 'zlib.dll'}:
                 relative = source.relative_to(bundle).as_posix()
                 if relative == 'zhenguojian.exe':
                     relative = variant.slug + '.exe'
