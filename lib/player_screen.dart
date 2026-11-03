@@ -10,6 +10,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app_layout.dart';
+import 'desktop_layout.dart';
 import 'app_orientation.dart';
 import 'app_theme.dart';
 import 'core_bridge.dart';
@@ -644,9 +645,8 @@ class _PlayerScreenState extends State<PlayerScreen>
       );
     } catch (error) {
       if (mounted && !_closed) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
       }
     } finally {
       if (mounted && !_closed) setState(() => _panelOpen = false);
@@ -1014,8 +1014,14 @@ class _PlayerScreenState extends State<PlayerScreen>
               await platform.setProperty('vd-lavc-skiploopfilter', 'all');
               await platform.setProperty('vd-lavc-skipidct', 'all');
               await platform.setProperty('vd-lavc-threads', '2');
-              await platform.setProperty('demuxer-max-bytes', '${4 * 1024 * 1024}');
-              await platform.setProperty('demuxer-max-back-bytes', '${1 * 1024 * 1024}');
+              await platform.setProperty(
+                'demuxer-max-bytes',
+                '${4 * 1024 * 1024}',
+              );
+              await platform.setProperty(
+                'demuxer-max-back-bytes',
+                '${1 * 1024 * 1024}',
+              );
               await platform.setProperty('demuxer-readahead-secs', '5');
             } else {
               await platform.setProperty('hwdec', 'auto-safe');
@@ -1045,7 +1051,9 @@ class _PlayerScreenState extends State<PlayerScreen>
         _plan = plan;
         installed = true;
         _acceptErrors = true;
-        DiaryService.add('[Play] 调用 _player.open: url=${plan.url}, headers=${plan.headers.keys.toList()}');
+        DiaryService.add(
+          '[Play] 调用 _player.open: url=${plan.url}, headers=${plan.headers.keys.toList()}',
+        );
         await _player.open(
           Media(
             plan.url,
@@ -1179,9 +1187,8 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   void _notice(String message) {
     if (!mounted || _closed) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _setPreferences(PlaybackPreferences preferences) async {
@@ -1577,9 +1584,20 @@ class _PlayerScreenState extends State<PlayerScreen>
                     bottom: !fullscreen,
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final desktop = constraints.maxWidth >= 840;
+                        final desktop =
+                            !_mobile &&
+                            !_television &&
+                            constraints.maxWidth >= DesktopLayout.breakpoint;
                         if (fullscreen) {
                           return _videoPane(context);
+                        }
+                        if (desktop && constraints.maxHeight >= 360) {
+                          return DesktopPlaybackLayout(
+                            video: _videoPane(context),
+                            information: _desktopPlaybackInformation(),
+                            episodes: _episodePanel(),
+                            description: _mobileSynopsis(),
+                          );
                         }
                         if (desktop ||
                             constraints.maxWidth >
@@ -1768,7 +1786,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         FilledButton.tonalIcon(
-                          onPressed: () => DiaryService.showDiaryDialog(context),
+                          onPressed: () =>
+                              DiaryService.showDiaryDialog(context),
                           icon: const Icon(Icons.receipt_long_rounded),
                           label: const Text('查看播放日记'),
                         ),
@@ -1779,8 +1798,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                             label: const Text('改为在线播放'),
                           )
                         else if (!_localFailure &&
-                              !widget.localOnly &&
-                              widget.repository.supportsSourceManagement)
+                            !widget.localOnly &&
+                            widget.repository.supportsSourceManagement)
                           SourceDiagnosticsButton(
                             repository: widget.repository,
                             store: widget.store,
@@ -1954,9 +1973,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                   children: [
                     Text(
                       drama.title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
                     ),
                     if (meta.isNotEmpty) ...[
                       const SizedBox(height: 6),
@@ -2086,6 +2104,47 @@ class _PlayerScreenState extends State<PlayerScreen>
       preferences: widget.store.downloadPreferences,
       embedded: true,
       onSubmit: _submitDownloadSelection,
+    );
+  }
+
+  Widget _desktopPlaybackInformation() {
+    final drama = widget.detail.drama;
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                drama.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '第 ${widget.detail.episodes[_index].number} 集 · 共 ${widget.detail.episodes.length} 集',
+                style: TextStyle(color: colors.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        IconButton(
+          tooltip: '上一集',
+          onPressed: _index > 0 ? () => _play(_index - 1) : null,
+          icon: const Icon(Icons.skip_previous_rounded),
+        ),
+        IconButton.filledTonal(
+          tooltip: '下一集',
+          onPressed: _index + 1 < widget.detail.episodes.length
+              ? () => _play(_index + 1)
+              : null,
+          icon: const Icon(Icons.skip_next_rounded),
+        ),
+      ],
     );
   }
 

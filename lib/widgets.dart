@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'core_bridge.dart';
 import 'app_layout.dart';
+import 'desktop_layout.dart';
 import 'models.dart';
 import 'remote_widgets.dart';
 
@@ -16,9 +17,8 @@ Future<void> saveUserChange(
     await action();
   } catch (_) {
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('未能保存，请检查存储空间和权限后重试。')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('未能保存，请检查存储空间和权限后重试。')));
     }
   }
 }
@@ -347,15 +347,13 @@ class DramaTile extends StatelessWidget {
   final VoidCallback? onLongPress;
 
   static double titleHeight(BuildContext context) =>
-      MediaQuery.textScalerOf(
-        context,
-      ).scale(AppLayout.isTelevision(context) ? 17 : 14) *
+      MediaQuery.textScalerOf(context)
+          .scale(AppLayout.isTelevision(context) ? 17 : 14) *
       2.6;
 
   static double subtitleHeight(BuildContext context) =>
-      MediaQuery.textScalerOf(
-        context,
-      ).scale(AppLayout.isTelevision(context) ? 14 : 12) *
+      MediaQuery.textScalerOf(context)
+          .scale(AppLayout.isTelevision(context) ? 14 : 12) *
       1.3;
 
   static double extentFor(BuildContext context, double width) =>
@@ -551,7 +549,12 @@ class StatusPanel extends StatelessWidget {
 }
 
 SliverGridDelegate dramaGridDelegate(BuildContext context, double width) {
-  final columns = width < 600 ? 3 : (width / 180).floor().clamp(4, 9);
+  final desktop =
+      !AppLayout.isTelevision(context) &&
+      MediaQuery.sizeOf(context).width >= DesktopLayout.breakpoint;
+  final columns = width < 600
+      ? 3
+      : (width / (desktop ? 200 : 180)).floor().clamp(4, 9);
   final spacing = width < 600 ? 10.0 : 18.0;
   final tileWidth = (width - (columns - 1) * spacing) / columns;
   return SliverGridDelegateWithFixedCrossAxisCount(

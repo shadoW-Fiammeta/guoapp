@@ -24,7 +24,7 @@ import 'diary_service.dart';
 
 Future<void> main(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
-  DiaryService.add('[App] 应用启动，版本: 0.2.64+71, 平台: ${Platform.operatingSystem}');
+  DiaryService.add('[App] 应用启动，版本: 0.2.65+72, 平台: ${Platform.operatingSystem}');
   if (Platform.isAndroid) {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setSystemUIOverlayStyle(AppTheme.systemBars(Brightness.dark));
@@ -40,6 +40,22 @@ Future<void> main(List<String> arguments) async {
   }
   final device = await AppDevice.detect();
   runApp(AppBootstrap(device: device));
+  if (Platform.isWindows) {
+    unawaited(
+      windowManager.waitUntilReadyToShow(
+        const WindowOptions(
+          size: Size(1280, 800),
+          minimumSize: Size(840, 560),
+          center: true,
+          title: appName,
+        ),
+        () async {
+          await windowManager.show();
+          await windowManager.focus();
+        },
+      ),
+    );
+  }
 }
 
 class AppBootstrap extends StatefulWidget {
@@ -89,9 +105,9 @@ class _AppBootstrapState extends State<AppBootstrap>
         unawaited(library.cancel());
       }
       unawaited(
-        NativeRepository(
-          background: true,
-        ).controlDownloads('pauseAll').catchError((Object _) {}),
+        NativeRepository(background: true)
+            .controlDownloads('pauseAll')
+            .catchError((Object _) {}),
       );
     } else if (state == AppLifecycleState.resumed) {
       if (library != null) library.suspended = false;

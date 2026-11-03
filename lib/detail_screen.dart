@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import 'app_layout.dart';
+import 'desktop_layout.dart';
 import 'core_bridge.dart';
 import 'download_picker.dart';
 import 'downloads_screen.dart';
@@ -222,9 +223,8 @@ class _DetailScreenState extends State<DetailScreen> {
       );
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
       }
     }
   }
@@ -347,7 +347,9 @@ class _DetailScreenState extends State<DetailScreen> {
           bottom: false,
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1200),
+              constraints: const BoxConstraints(
+                maxWidth: DesktopLayout.contentWidth,
+              ),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   if (!allowed) {
@@ -356,18 +358,19 @@ class _DetailScreenState extends State<DetailScreen> {
                       message: '请返回剧库后重新选择。',
                     );
                   }
-                  if (television || constraints.maxWidth >= 960) {
+                  if (television ||
+                      constraints.maxWidth >= DesktopLayout.breakpoint) {
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         SizedBox(
                           width: (constraints.maxWidth * .34).clamp(
                             250.0,
-                            360.0,
+                            420.0,
                           ),
                           child: SingleChildScrollView(
                             padding: const EdgeInsets.all(20),
-                            child: _overview(drama),
+                            child: _overview(drama, spacious: !television),
                           ),
                         ),
                         const VerticalDivider(width: 1),
@@ -441,9 +444,8 @@ class _DetailScreenState extends State<DetailScreen> {
                                     ),
                                     mainAxisExtent: math.max(
                                       54,
-                                      MediaQuery.textScalerOf(
-                                            context,
-                                          ).scale(20) +
+                                      MediaQuery.textScalerOf(context)
+                                              .scale(20) +
                                           30,
                                     ),
                                     crossAxisSpacing: 10,
@@ -576,9 +578,8 @@ class _DetailScreenState extends State<DetailScreen> {
                     '选集 · ${episodes.length} 集$current',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: Theme.of(context).textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
                 Text(expanded ? '收起' : '展开'),
@@ -639,7 +640,7 @@ class _DetailScreenState extends State<DetailScreen> {
     return ((width - 40) / minimum).floor().clamp(1, 12);
   }
 
-  Widget _overview(Drama drama) {
+  Widget _overview(Drama drama, {bool spacious = false}) {
     final colors = Theme.of(context).colorScheme;
     final meta = [
       SourceSite.byId(drama.source).name,
@@ -650,24 +651,35 @@ class _DetailScreenState extends State<DetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (spacious) ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SizedBox(
+              width: 172,
+              height: 258,
+              child: DramaCover(drama: drama, repository: widget.repository),
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: 92,
-              height: 138,
-              child: DramaCover(drama: drama, repository: widget.repository),
-            ),
-            const SizedBox(width: 16),
+            if (!spacious)
+              SizedBox(
+                width: 92,
+                height: 138,
+                child: DramaCover(drama: drama, repository: widget.repository),
+              ),
+            if (!spacious) const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     drama.title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: Theme.of(context).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 10),
                   Text(

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'app_layout.dart';
 import 'app_bottom_navigation.dart';
+import 'desktop_layout.dart';
 import 'app_build.dart';
 import 'core_bridge.dart';
 import 'catalog_filters.dart';
@@ -45,6 +46,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   static const _recommendationCategory = 'app:recommendations';
   final _search = TextEditingController();
+  final _searchFocus = FocusNode();
   final _scroll = ScrollController();
   Timer? _debounce;
   late SourceSite _source;
@@ -457,6 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
     unawaited(widget.repository.cancelSuggestions());
     _debounce?.cancel();
     _search.dispose();
+    _searchFocus.dispose();
     _scroll.removeListener(_onCatalogScroll);
     _scroll.dispose();
     super.dispose();
@@ -706,9 +709,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     if (!_selectedDramas.containsKey(drama.id) &&
         _selectedDramas.length >= BatchDownloads.maxDramas) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('一次最多选择 50 部短剧，请分批下载')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('一次最多选择 50 部短剧，请分批下载')));
       return;
     }
     setState(() {
@@ -816,10 +818,11 @@ class _HomeScreenState extends State<HomeScreen> {
     builder: (context, _) => LayoutBuilder(
       builder: (context, constraints) {
         final television = AppLayout.isTelevision(context);
-        final desktop = constraints.maxWidth >= 840;
+        final desktop =
+            !television && constraints.maxWidth >= DesktopLayout.breakpoint;
         final scaffold = Scaffold(
           appBar: AppBar(
-            toolbarHeight: television ? 64 : null,
+            toolbarHeight: television || desktop ? 72 : null,
             titleSpacing: 12,
             title: _selectionMode
                 ? const Text(
@@ -918,16 +921,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       onPressed: () => setState(() => _selectionMode = true),
                       icon: const Icon(Icons.checklist_rounded),
                     ),
-                  IconButton(
-                    key: const ValueKey('toggle-search'),
-                    tooltip: _searchVisible ? '收起搜索' : '搜索',
-                    icon: Icon(
-                      _searchVisible
-                          ? Icons.search_off_rounded
-                          : Icons.search_rounded,
+                  if (!desktop)
+                    IconButton(
+                      key: const ValueKey('toggle-search'),
+                      tooltip: _searchVisible ? '收起搜索' : '搜索',
+                      icon: Icon(
+                        _searchVisible
+                            ? Icons.search_off_rounded
+                            : Icons.search_rounded,
+                      ),
+                      onPressed: _toggleSearch,
                     ),
-                    onPressed: _toggleSearch,
-                  ),
                 ],
                 if (_tab == 0 &&
                     !_showRecommendations &&
@@ -1058,64 +1062,51 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const VerticalDivider(width: 1),
                 ] else if (desktop) ...[
-                  NavigationRail(
+                  DesktopSidebar(
                     selectedIndex: _tab,
-                    onDestinationSelected: _onNavSelected,
-                    labelType: NavigationRailLabelType.all,
-                    groupAlignment: -.8,
-                    destinations: [
-                      NavigationRailDestination(
-                        icon: Icon(Icons.explore_outlined),
-                        selectedIcon: Icon(Icons.explore),
-                        label: Text('发现'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.bookmark_border_rounded),
-                        selectedIcon: Icon(Icons.bookmark_rounded),
-                        label: Text('追剧'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.history_rounded),
-                        label: Text('最近观看'),
-                      ),
-                      if (widget.store.canDownload)
-                        NavigationRailDestination(
-                          icon: Icon(Icons.download_outlined),
-                          selectedIcon: Icon(Icons.download_rounded),
-                          label: Text('下载'),
-                        ),
-                    ],
+                    onSelected: _onNavSelected,
+                    extended:
+                        constraints.maxWidth >=
+                        DesktopLayout.expandedBreakpoint,
+                    canDownload: widget.store.canDownload,
+                    onSettings: _openDesktopSettings,
                   ),
                   const VerticalDivider(width: 1, thickness: 1),
                 ],
                 Expanded(
-                  child: _tab == 0
-                      ? widget.store.sources.isEmpty
-                            ? const StatusPanel(
-                                title: '暂无可用站源',
-                                message: '请联系管理员为当前用户开放站源。',
-                              )
-                            : _catalog(selectionInBody: desktop || television)
-                      : _tab == 3
-                      ? DownloadsScreen(
-                          repository: widget.repository,
-                          store: widget.store,
-                          embedded: true,
-                        )
-                      : SavedLibrary(
-                          key: ValueKey('saved-tab-$_tab'),
-                          repository: widget.repository,
-                          store: widget.store,
-                          history: _tab == 2,
-                          onOpen: _openDrama,
-                          onContinue: (drama) =>
-                              _openDrama(drama, resume: true),
-                          onDownload:
-                              widget.repository.supportsDownloads &&
-                                  widget.store.canDownload
-                              ? (drama) => _openDrama(drama, download: true)
-                              : null,
-                        ),
+                  child: _workspace(
+                    desktop,
+                    _tab == 0
+                        ? widget.store.sources.isEmpty
+                              ? const StatusPanel(
+                                  title: '暂无可用站源',
+                                  message: '请联系管理员为当前用户开放站源。',
+                                )
+                              : _catalog(
+                                  selectionInBody: desktop || television,
+                                  desktop: desktop,
+                                )
+                        : _tab == 3
+                        ? DownloadsScreen(
+                            repository: widget.repository,
+                            store: widget.store,
+                            embedded: true,
+                          )
+                        : SavedLibrary(
+                            key: ValueKey('saved-tab-$_tab'),
+                            repository: widget.repository,
+                            store: widget.store,
+                            history: _tab == 2,
+                            onOpen: _openDrama,
+                            onContinue: (drama) =>
+                                _openDrama(drama, resume: true),
+                            onDownload:
+                                widget.repository.supportsDownloads &&
+                                    widget.store.canDownload
+                                ? (drama) => _openDrama(drama, download: true)
+                                : null,
+                          ),
+                  ),
                 ),
               ],
             ),
@@ -1151,6 +1142,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
         );
+        if (desktop && !_selectionMode) {
+          return CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+                  _focusDesktopSearch,
+              const SingleActivator(LogicalKeyboardKey.keyF, control: true):
+                  _focusDesktopSearch,
+            },
+            child: Focus(autofocus: true, skipTraversal: true, child: scaffold),
+          );
+        }
         if (!television && !_selectionMode) return scaffold;
         return PopScope(
           canPop:
@@ -1173,28 +1175,94 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   );
 
-  Widget _catalog({required bool selectionInBody}) {
+  Widget _workspace(bool desktop, Widget child) =>
+      desktop ? DesktopContent(child: child) : child;
+
+  void _openDesktopSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            SettingsScreen(repository: widget.repository, store: widget.store),
+      ),
+    );
+  }
+
+  void _focusDesktopSearch() {
+    if (_selectionMode) return;
+    if (_showRecommendations) _changeCategory('');
+    if (_tab != 0) _changeTab(0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _searchFocus.requestFocus();
+      _search.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _search.text.length,
+      );
+    });
+  }
+
+  Widget _catalog({required bool selectionInBody, bool desktop = false}) {
     final items = _visible;
     final television = AppLayout.isTelevision(context);
+    final searchVisible = !television && (_searchVisible || desktop);
     return Column(
       children: [
-        if (_searchVisible && !television)
+        if (desktop)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-            child: SearchInput(
-              key: ValueKey('search-${_group.id}'),
-              controller: _search,
-              autofocus: true,
-              hint: _searchHint,
-              suggestions: _searchSuggestions
-                  ? widget.repository.suggestions
-                  : null,
-              onChanged: _searchChanged,
-              onCancel: () => unawaited(widget.repository.cancelSuggestions()),
-              onSearch: _submitSearch,
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _showRecommendations
+                        ? '为你推荐'
+                        : _submittedQuery.isNotEmpty
+                        ? '搜索结果'
+                        : '发现好剧',
+                    style: Theme.of(context).textTheme.headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Text(
+                  'Ctrl + K 搜索',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
             ),
           ),
-        if (_searchVisible &&
+        if (searchVisible)
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              desktop ? 24 : 16,
+              desktop ? 12 : 4,
+              desktop ? 24 : 16,
+              12,
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: desktop ? 560 : double.infinity,
+                ),
+                child: SearchInput(
+                  key: ValueKey('search-${_group.id}'),
+                  controller: _search,
+                  autofocus: !desktop,
+                  focusNode: _searchFocus,
+                  hint: _searchHint,
+                  suggestions: _searchSuggestions
+                      ? widget.repository.suggestions
+                      : null,
+                  onChanged: _searchChanged,
+                  onCancel: () =>
+                      unawaited(widget.repository.cancelSuggestions()),
+                  onSearch: _submitSearch,
+                ),
+              ),
+            ),
+          ),
+        if (searchVisible &&
             _search.text.trim().isEmpty &&
             widget.store.recentSearches.isNotEmpty)
           Padding(
@@ -1384,9 +1452,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         : Text(
                                             '已经看到这里的全部剧集',
                                             style: TextStyle(
-                                              color: Theme.of(
-                                                context,
-                                              ).colorScheme.onSurfaceVariant,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
                                               fontSize: 12,
                                             ),
                                           ),

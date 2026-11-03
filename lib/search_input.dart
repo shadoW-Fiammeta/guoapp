@@ -13,6 +13,7 @@ class SearchInput extends StatefulWidget {
     this.suggestions,
     this.onCancel,
     this.autofocus = false,
+    this.focusNode,
   });
   final TextEditingController controller;
   final String hint;
@@ -21,12 +22,14 @@ class SearchInput extends StatefulWidget {
   final Future<List<String>> Function(String)? suggestions;
   final VoidCallback? onCancel;
   final bool autofocus;
+  final FocusNode? focusNode;
   @override
   State<SearchInput> createState() => _SearchInputState();
 }
 
 class _SearchInputState extends State<SearchInput> {
-  final _focus = FocusNode();
+  final _ownedFocus = FocusNode();
+  FocusNode get _focus => widget.focusNode ?? _ownedFocus;
   Timer? _timer;
   Completer<Iterable<String>>? _pending;
   int _generation = 0;
@@ -51,7 +54,7 @@ class _SearchInputState extends State<SearchInput> {
   @override
   void dispose() {
     _cancel();
-    _focus.dispose();
+    _ownedFocus.dispose();
     super.dispose();
   }
 
@@ -70,9 +73,11 @@ class _SearchInputState extends State<SearchInput> {
     _pending = pending;
     _timer = Timer(const Duration(milliseconds: 300), () async {
       try {
-        final result = (await widget.suggestions!(
-          query,
-        )).where((s) => s.trim().isNotEmpty).toSet().take(10).toList();
+        final result = (await widget.suggestions!(query))
+            .where((s) => s.trim().isNotEmpty)
+            .toSet()
+            .take(10)
+            .toList();
         if (generation == _generation && mounted) {
           if (_cache.length >= 32) _cache.remove(_cache.keys.first);
           _cache[query] = result;
