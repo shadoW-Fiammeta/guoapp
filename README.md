@@ -21,7 +21,7 @@ Flutter 多端独立短剧 / 影视应用，原名「短剧库 APP」。站源�
 
 ## 电脑端界面改版（0.2.65+72）
 
-本次交付是经过修改的源码开发快照，尚未在 Windows 构建或实机验收，不是已编译的 EXE 安装包。
+本次桌面适配源码已于 2026-11-03 在 Windows 云端完成 Release 构建，并生成 Windows 10/11 x64 免安装 ZIP；实际在线视频播放仍需在用户电脑上验证。
 
 - 宽度 840–1099 的窗口使用紧凑侧栏，1100 及以上展开导航文字；发现、追剧、最近观看、下载及设置可从侧栏进入。
 - 桌面搜索框常驻，Ctrl+K / Ctrl+F 返回发现页并定位搜索；手机窗口仍采用底部导航。
@@ -42,7 +42,9 @@ Flutter 多端独立短剧 / 影视应用，原名「短剧库 APP」。站源�
 
 没有 Windows 开发环境时，将本源码放入自己的 GitHub 仓库，进入 **Actions → Build Windows desktop → Run workflow**，选择 `all`（全站源）或 `hongguo`（仅红果）。任务在 Windows 构建机安装依赖、检查源码和桌面布局，再生成 ZIP；成功后从该任务的 Artifacts 下载。该任务可手动运行，也会在推送 `codex/windows-desktop` 分支时自动构建全站源版，不发布 Release。原来的 Build app packages 工作流保持原样，其中 Windows 任务仍停用。
 
-本环境已完成 Dart 3.13.7 格式化与语法检查、Python 打包与同步脚本测试（17 项，1 项跳过）和工作流配置检查。新增 `test/desktop_layout_test.dart` 覆盖三种桌面分辨率、侧栏切换、搜索快捷键、缩小窗口、播放侧栏和详情分栏；Flutter 依赖与 SDK 无法在当前环境取得，相关 widget 测试、完整静态分析、Windows 编译和真实播放仍待执行。不能将此源码快照视为已通过运行验收的版本。
+已完成 Dart 格式化、Python 构建辅助测试（17 项，1 项跳过）、Windows 云端依赖锁校验和静态分析（无错误，保留上游非阻断警告），九项桌面与搜索 widget 测试通过。布局检查覆盖 840×560、1280×800、1920×1080 三种分辨率、侧栏切换、搜索快捷键、缩小窗口、播放侧栏和详情分栏。Windows Release 构建与完整 ZIP 打包成功；真实视频播放和本机音视频设备仍待实机验证。
+
+本轮同时补齐上游遗漏的播放器依赖锁文件，并将失效的 libmpv 归档更新为已核验 SHA256 的 20261103 构建。构建记录：[Build Windows desktop #3](https://github.com/shadoW-Fiammeta/guoapp/actions/runs/41595165074)。
 
 ## 使用
 
